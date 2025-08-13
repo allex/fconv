@@ -60,6 +60,10 @@ func main() {
 			fmt.Print(helpText)
 			return
 		}
+		if arg == "--version" || arg == "-v" || arg == "version" {
+			fmt.Printf("fconv %s (rev %s) %s\n", appVersion, gitCommit, buildTime)
+			return
+		}
 	}
 
 	s := server.Start()
