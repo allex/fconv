@@ -1,4 +1,4 @@
-# File Conversion Utilities
+# File Conversion Utilities (FCONV)
 
 This directory contains utilities for converting various file formats to supported formats.
 
@@ -93,7 +93,7 @@ Example (`projects/app/data/config.json`):
 {
   "systemEnv": {
     "customDoc2Docx": {
-      "url": "https://your-docx.example.com/convert/doc2docx",
+      "url": "https://your-docx.example.com/api/v1/convert/doc2docx",
       "key": "YOUR_SECRET_KEY",
       "timeoutMs": 600000
     }
@@ -115,7 +115,7 @@ Example (`projects/app/data/config.json`):
 Curl example:
 
 ```bash
-curl -X POST "https://your-docx.example.com/convert" \
+curl -X POST "https://your-docx.example.com/api/v1/convert/doc2docx" \
   -H "Authorization: Bearer YOUR_SECRET_KEY" \
   -F "file=@/path/to/input.doc" \
   --output output.docx
@@ -142,7 +142,7 @@ Example JSON response:
 
 ```json
 {
-  "docxBase64": "UEsDBBQAAAAIA...base64...AAA="
+  "base64": "UEsDBBQAAAAIA...base64...AAA="
 }
 ```
 
@@ -162,7 +162,7 @@ Notes:
 ### Minimal service reference implementation (pseudo)
 
 ```http
-POST /convert/doc2docx
+POST /api/v1/convert/doc2docx
 Authorization: Bearer <optional>
 Content-Type: multipart/form-data; boundary=...
 
