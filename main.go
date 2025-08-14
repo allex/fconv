@@ -2,7 +2,9 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 
@@ -19,10 +21,25 @@ var (
 const helpText = `fconv - File conversion server
 
 Usage:
-  fconv [--help | -h | help | --version | -v | version]
+  fconv [-help | -h | -version | -v]
+  fconv [-host HOST] [-port PORT]
 
 Description:
   Runs an HTTP server for file format conversions using LibreOffice and pluggable converters.
+
+Options:
+  -host HOST            Host/IP to bind (default 0.0.0.0)
+  -port PORT            Port to listen on (default 8080)
+  -help, -h             Show help info
+  -version, -v          Show version
+
+Environment:
+  FCONV_LISTEN_ADDR     Server listen address (default ":8080"). Examples: ":8081", "127.0.0.1:8080", "0.0.0.0:9090"
+  FCONV_AUTH_KEY        Optional bearer token required for requests (Authorization: Bearer <key>)
+  FCONV_TIMEOUT         Conversion timeout (default 10m). Examples: "30s", "5m", "1h"
+  FCONV_TMPDIR          Override temporary working directory
+  FCONV_ENABLE_SHA256   If true, include X-Content-SHA256 header in binary responses (default true)
+  GIN_MODE              One of: debug | test | release (default release)
 
 HTTP API:
   GET  /healthz
@@ -33,14 +50,6 @@ HTTP API:
        - Converts the uploaded .doc to .docx
        - Default response: application/vnd.openxmlformats-officedocument.wordprocessingml.document
        - JSON response: set header "Accept: application/json" or query "?format=json" to receive {"base64": "..."}
-
-Environment:
-  FCONV_LISTEN_ADDR   Server listen address (default ":8080")
-  FCONV_AUTH_KEY      Optional bearer token required for requests (Authorization: Bearer <key>)
-  FCONV_TIMEOUT       Conversion timeout (default 10m). Examples: "30s", "5m", "1h"
-  FCONV_TMPDIR        Override temporary working directory
-  FCONV_ENABLE_SHA256 If true, include X-Content-SHA256 header in binary responses (default true)
-  GIN_MODE               One of: debug | test | release (default release)
 
 Examples:
   Binary DOCX response:
@@ -56,16 +65,51 @@ Examples:
 func main() {
 	defer handlePanic()
 
-	if len(os.Args) > 1 {
-		arg := os.Args[1]
-		if arg == "--help" || arg == "-h" || arg == "help" {
-			fmt.Print(helpText)
-			return
+	// Configure flag usage to show the custom help text
+	flag.Usage = func() {
+		fmt.Print(helpText)
+	}
+
+	// Flags
+	var (
+		hostFlag    string
+		portFlag    int
+		showHelp    bool
+		showVersion bool
+	)
+
+	flag.StringVar(&hostFlag, "host", "", "Host/IP to bind (default 0.0.0.0)")
+	flag.IntVar(&portFlag, "port", 0, "Port to listen on (default 8080)")
+	flag.BoolVar(&showHelp, "help", false, "Show help")
+	flag.BoolVar(&showHelp, "h", false, "Show help (shorthand)")
+	flag.BoolVar(&showVersion, "version", false, "Show version")
+	flag.BoolVar(&showVersion, "v", false, "Show version (shorthand)")
+	flag.Parse()
+
+	if showHelp {
+		fmt.Print(helpText)
+		return
+	}
+	if showVersion {
+		fmt.Printf("fconv %s (rev %s) %s\n", appVersion, gitCommit, buildTime)
+		return
+	}
+
+	// If either host or port provided, construct FCONV_LISTEN_ADDR accordingly
+	if hostFlag != "" || portFlag != 0 {
+		if portFlag < 0 || portFlag > 65535 {
+			fmt.Fprintln(os.Stderr, "error: -port must be a positive integer (1-65535)")
+			os.Exit(2)
 		}
-		if arg == "--version" || arg == "-v" || arg == "version" {
-			fmt.Printf("fconv %s (rev %s) %s\n", appVersion, gitCommit, buildTime)
-			return
+		addr := ""
+		if hostFlag != "" && portFlag != 0 {
+			addr = net.JoinHostPort(hostFlag, fmt.Sprintf("%d", portFlag))
+		} else if hostFlag != "" { // host only => default to 8080
+			addr = net.JoinHostPort(hostFlag, "8080")
+		} else { // port only
+			addr = fmt.Sprintf(":%d", portFlag)
 		}
+		_ = os.Setenv("FCONV_LISTEN_ADDR", addr)
 	}
 
 	s := server.Start()
