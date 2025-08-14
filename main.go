@@ -45,7 +45,7 @@ HTTP API:
   GET  /healthz
        Health check endpoint. Returns "ok" when the server is healthy.
 
-  POST /api/v1/doc2docx
+  POST /api/v1/convert/doc2docx
        Multipart form upload with a single file field named "file".
        - Converts the uploaded .doc to .docx
        - Default response: application/vnd.openxmlformats-officedocument.wordprocessingml.document
@@ -53,12 +53,12 @@ HTTP API:
 
 Examples:
   Binary DOCX response:
-    curl -sS -X POST 'http://localhost:8080/api/v1/doc2docx' \
+    curl -sS -X POST 'http://localhost:8080/api/v1/convert/doc2docx' \
       -F 'file=@/path/to/input.doc' \
       -o output.docx
 
   JSON response (base64 -> docx):
-    curl -sS -H 'Accept: application/json' -X POST 'http://localhost:8080/api/v1/doc2docx' \
+    curl -sS -H 'Accept: application/json' -X POST 'http://localhost:8080/api/v1/convert/doc2docx' \
       -F 'file=@/path/to/input.doc' | jq -r .base64 | base64 --decode > output.docx
 `
 

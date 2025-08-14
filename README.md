@@ -1,6 +1,6 @@
 # File Conversion Utilities (FCONV)
 
-This project provides a high-performance HTTP server for file format conversions, with a focus on Microsoft Word document processing. It offers a REST API for converting various document formats (particularly .doc to .docx) using LibreOffice as the conversion engine, with support for pluggable converter architectures.
+High-performance HTTP server for document format conversions, specializing in .doc to .docx conversion via LibreOffice. Features REST API, pluggable converter architecture, and optional external service integration.
 
 ## Quick Start / Usage
 
@@ -10,9 +10,9 @@ This project provides a high-performance HTTP server for file format conversions
   - Options: `./fconv -h` (flags include `-host`, `-port`; envs include `FCONV_PORT`, `FCONV_LISTEN_ADDR`, `FCONV_AUTH_KEY`, `FCONV_TIMEOUT` etc,.)
 
 - **Run with Docker**:
-  - Pull/build image (example tag): `docker pull harbor.tidu.io/tdio/fconv:latest`
-  - Start server: `docker run --rm -p 8080:8080 --name fconv harbor.tidu.io/tdio/fconv:latest`
-  - For more help: `docker run --rm harbor.tidu.io/tdio/fconv:latest -h`
+  - Pull/build image (example tag): `docker pull tdio/fconv:latest`
+  - Start server: `docker run --rm -p 8080:8080 --name fconv tdio/fconv:latest`
+  - For more help: `docker run --rm tdio/fconv:latest -h`
 
 - **Health check**:
   - `curl http://localhost:8080/healthz` → `ok`

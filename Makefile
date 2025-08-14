@@ -87,7 +87,7 @@ build: clean
 		done \
 	done
 
-## > publish [UPDATE_SNAPSHOTS=true] - publish docker image
+## > publish [PREFIX=tdio] - publish docker image
 publish:
 	export BUILD_TAG=$(release_tag); \
 	docker buildx bake \
