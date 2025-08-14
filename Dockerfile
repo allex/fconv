@@ -29,35 +29,41 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 	CGO_ENABLED=0 \
 	go build -ldflags "-w -s -X main.appVersion=v${BUILD_TAG} -X main.gitCommit=${GIT_COMMIT} -X 'main.buildTime=${BUILD_TIME}'" -o /out/fconv .
 
-# -------- Runtime stage --------
-FROM debian:12-slim
+# -------- Package downloader stage --------
+FROM debian:12-slim AS package-downloader
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install runtime deps: LibreOffice (headless capable), fonts, certs
+# Configure mirrors and download all required packages and their dependencies
 RUN set -ex; \
 	sed -i 's#deb.debian.org#mirrors.ustc.edu.cn#g' /etc/apt/sources.list.d/debian.sources \
 	&& apt-get update \
-	&& apt-get install -yq --no-install-recommends \
+	&& mkdir -p /tmp/build && DEBIAN_FRONTEND=noninteractive apt-get -o Dir::Cache::Archives=/tmp/build --download-only install -yq --no-install-recommends \
 		libreoffice-writer libreoffice-calc \
 		default-jre ure-java \
 		fonts-dejavu \
-	&& apt-get autoremove -yq \
+	&& cp /etc/apt/sources.list.d/debian.sources /tmp/build/debian.sources
+
+# -------- Runtime stage --------
+FROM debian:12-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+	GIN_MODE=release \
+	FCONV_PORT=8080 \
+	FCONV_ENABLE_SHA256=true
+
+# Install packages from mounted .deb files
+RUN --mount=from=package-downloader,source=/tmp/build,target=/tmp/build \
+	set -ex; \
+	(cd /tmp/build && dpkg -i *.deb && cp -f ./debian.sources /etc/apt/sources.list.d/debian.sources) \
 	&& rm -rf /var/lib/apt/lists/* /usr/share/man/*
 
 # Create non-root user
 RUN groupadd -g 201 fconv \
-  && useradd -m -u 201 -g fconv fconv
+	&& useradd -m -u 201 -g fconv fconv
 
 WORKDIR /app
 
 # Copy binary
 COPY --from=builder /out/fconv /usr/local/bin/fconv
-
-# Default env
-ENV GIN_MODE=release \
-	FCONV_LISTEN_ADDR=:8080 \
-	FCONV_ENABLE_SHA256=true
 
 EXPOSE 8080
 USER fconv
