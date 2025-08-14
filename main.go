@@ -1,13 +1,12 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 
+	"github.com/allex/fconv/pkgs/util"
 	"github.com/allex/fconv/server"
 )
 
@@ -35,6 +34,7 @@ Options:
 
 Environment:
   FCONV_LISTEN_ADDR     Server listen address (default ":8080"). Examples: ":8081", "127.0.0.1:8080", "0.0.0.0:9090"
+  FCONV_PORT            Shortcut to set port (e.g. 8081). Ignored if FCONV_LISTEN_ADDR is set
   FCONV_AUTH_KEY        Optional bearer token required for requests (Authorization: Bearer <key>)
   FCONV_TIMEOUT         Conversion timeout (default 10m). Examples: "30s", "5m", "1h"
   FCONV_TMPDIR          Override temporary working directory
@@ -97,7 +97,7 @@ func main() {
 
 	// If either host or port provided, construct FCONV_LISTEN_ADDR accordingly
 	if hostFlag != "" || portFlag != 0 {
-		if portFlag < 0 || portFlag > 65535 {
+		if !util.IsValidPort(portFlag) {
 			fmt.Fprintln(os.Stderr, "error: -port must be a positive integer (1-65535)")
 			os.Exit(2)
 		}
@@ -112,8 +112,7 @@ func main() {
 		_ = os.Setenv("FCONV_LISTEN_ADDR", addr)
 	}
 
-	s := server.Start()
-	if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err := server.Start(); err != nil {
 		panic(fmt.Errorf("error: %w", err))
 	}
 }

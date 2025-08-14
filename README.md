@@ -1,6 +1,37 @@
 # File Conversion Utilities (FCONV)
 
-This directory contains utilities for converting various file formats to supported formats.
+This project provides a high-performance HTTP server for file format conversions, with a focus on Microsoft Word document processing. It offers a REST API for converting various document formats (particularly .doc to .docx) using LibreOffice as the conversion engine, with support for pluggable converter architectures.
+
+## Quick Start / Usage
+
+- **Run locally (Go)**:
+  - Build and run: `go run .`
+  - Or build binary: `go build -o fconv . && ./fconv`
+  - Options: `./fconv -h` (flags include `-host`, `-port`; envs include `FCONV_PORT`, `FCONV_LISTEN_ADDR`, `FCONV_AUTH_KEY`, `FCONV_TIMEOUT` etc,.)
+
+- **Run with Docker**:
+  - Pull/build image (example tag): `docker pull harbor.tidu.io/tdio/fconv:latest`
+  - Start server: `docker run --rm -p 8080:8080 --name fconv harbor.tidu.io/tdio/fconv:latest`
+  - For more help: `docker run --rm harbor.tidu.io/tdio/fconv:latest -h`
+
+- **Health check**:
+  - `curl http://localhost:8080/healthz` → `ok`
+
+- **Convert .doc → .docx**:
+  - Binary response (writes `output.docx`):
+    ```bash
+    curl -sS -X POST 'http://localhost:8080/api/v1/convert/doc2docx' \
+      -F 'file=@/path/to/input.doc' \
+      -o output.docx
+    ```
+  - JSON base64 response:
+    ```bash
+    curl -sS -H 'Accept: application/json' -X POST 'http://localhost:8080/api/v1/convert/doc2docx' \
+      -F 'file=@/path/to/input.doc' | jq -r .base64 | base64 --decode > output.docx
+    ```
+
+- **Optional auth**:
+  - Start server with `FCONV_AUTH_KEY=secret` and pass header `Authorization: Bearer secret` in requests.
 
 ## .doc to docx Conversion
 

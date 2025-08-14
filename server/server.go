@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,16 +19,22 @@ import (
 	"github.com/allex/fconv/pkgs/util"
 )
 
-func Start() *http.Server {
-	cfg := loadConfig()
+func Start() error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
 
 	server := newServer(cfg)
 	fmt.Printf("Starting server on %s\n", cfg.listenAddr)
 
-	return server
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("server error: %w", err)
+	}
+	return nil
 }
 
-func newServer(cfg config) *http.Server {
+func newServer(cfg *config) *http.Server {
 	// Gin setup
 	mode := strings.ToLower(strings.TrimSpace(os.Getenv("GIN_MODE")))
 	switch mode {
@@ -59,7 +66,7 @@ func newServer(cfg config) *http.Server {
 	}
 }
 
-func makeConvertHandler(cfg config, forcedTargetExt string) gin.HandlerFunc {
+func makeConvertHandler(cfg *config, forcedTargetExt string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		fileHeader, err := c.FormFile(formFileFieldName)
 		if err != nil {
@@ -144,7 +151,7 @@ func noCacheMiddleware() gin.HandlerFunc {
 	}
 }
 
-func authMiddleware(cfg config) gin.HandlerFunc {
+func authMiddleware(cfg *config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if cfg.authKey != "" {
 			if !util.ValidateBearer(c.GetHeader(headerAuth), cfg.authKey) {

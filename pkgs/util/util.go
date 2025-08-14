@@ -3,6 +3,7 @@ package util
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -49,4 +50,37 @@ func SafeOutNameWithExt(in string, targetExt string) string {
 		cleanExt = "bin"
 	}
 	return strings.TrimSuffix(base, filepath.Ext(base)) + "." + cleanExt
+}
+
+// ParseValidPort parses and validates a port number from int or string.
+// Returns true and the parsed port number (1-65535) if valid, or false and 0 if invalid.
+func ParseValidPort(port any) (bool, int) {
+	var n int
+	switch v := port.(type) {
+	case int:
+		n = v
+	case string:
+		s := strings.TrimSpace(v)
+		if s == "" {
+			return false, 0
+		}
+		var err error
+		n, err = strconv.Atoi(s)
+		if err != nil {
+			return false, 0
+		}
+	default:
+		return false, 0
+	}
+	if n >= 1 && n <= 65535 {
+		return true, n
+	}
+	return false, 0
+}
+
+// IsValidPort returns true if port is in the valid range 1-65535.
+// Accepts both int and string types.
+func IsValidPort(port any) bool {
+	valid, _ := ParseValidPort(port)
+	return valid
 }
