@@ -90,7 +90,10 @@ build: clean
 ## > publish [UPDATE_SNAPSHOTS=true] - publish docker image
 publish:
 	export BUILD_TAG=$(release_tag); \
-	docker buildx bake --set "main.args.GIT_COMMIT=$(GIT_COMMIT)" --push
+	docker buildx bake \
+		--set "main.args.GIT_COMMIT=$(GIT_COMMIT)" \
+		--set "main.args.BUILD_TIME=$(BUILT)" \
+		--push
 
 clean:
 	rm -rf out

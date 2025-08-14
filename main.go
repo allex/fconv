@@ -54,6 +54,8 @@ Examples:
 `
 
 func main() {
+	defer handlePanic()
+
 	if len(os.Args) > 1 {
 		arg := os.Args[1]
 		if arg == "--help" || arg == "-h" || arg == "help" {
@@ -68,6 +70,13 @@ func main() {
 
 	s := server.Start()
 	if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		panic(fmt.Errorf("server error: %w", err))
+		panic(fmt.Errorf("error: %w", err))
+	}
+}
+
+func handlePanic() {
+	if r := recover(); r != nil {
+		fmt.Fprintln(os.Stderr, r)
+		os.Exit(1)
 	}
 }
