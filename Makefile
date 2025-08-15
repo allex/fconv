@@ -9,38 +9,48 @@ OUR_PACKAGES=$(shell go list ./... | grep -v '/vendor/')
 GOX = gox
 BUILT := $(shell date -u +%Y-%m-%dT%H:%M:%S%z)
 
-GIT_COMMIT = $(shell git rev-parse --short HEAD)
-LAST_TAG ?= $(shell git log --decorate --no-color --pretty="format:%d" |awk 'match($$0, "[(]?tag:\\s*v?([^,]+?)[,)]", arr) { if(arr[1] ~ "^.+?[0-9]+\\.[0-9]+\\.[0-9]+(-.+)?$$") print arr[1]; exit; }')
+GIT_COMMIT := $(shell git rev-parse --short HEAD)
+LATEST_TAG := $(shell git log --decorate --pretty="format:%d" | awk 'match($$0, "[(]?tag:\\s*v?([^,]+?)[,)]", arr) { if(arr[1] ~ "^.+?[0-9]+\\.[0-9]+\\.[0-9]+(-.+)?$$") print arr[1]; exit; }')
 
-ifeq ($(strip $(LAST_TAG)),)
-	LAST_TAG = "1.0.0"
+# flag to disable automate version if set true
+STATIC_VERSION := false
+
+# prerelease tag, such as dev,rc,next etc,.
+prerelease ?=
+
+# Specify the release type manully, <major|minor|patch>, default release as last tag
+# increase patch version when prerelease mode
+release_as ?= patch
+
+# check static version mode, set with args: release_as=x.y.z
+ifeq ($(shell echo "$(release_as)" | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+(-.+)?$$'),$(release_as))
+	# release_as is set to a valid version value
+	STATIC_VERSION := true
+	LATEST_TAG := $(release_as)
 endif
 
-# build as prerelease (dev) if not an exact tags
-LATEST_STABLE_TAG := $(shell git -c versionsort.suffix="-rc" -c versionsort.suffix="-RC" tag -l "*.*.*" | sort -rV | awk '!/rc/' | head -n 1)
-export IS_LATEST :=
-ifeq ($(shell git describe --tags --exact-match --match $(LATEST_STABLE_TAG) >/dev/null 2>&1; echo $$?), 0)
-	export IS_LATEST := true
-else
-	ifeq ($(prerelease),)
+IS_LATEST := false
+ifeq ($(shell git describe --tags --exact-match --match $(LATEST_TAG) >/dev/null 2>&1; echo $$?), 0)
+	STATIC_VERSION := true
+	IS_LATEST := true
+endif
+
+# set prerelease to dev if not static releasing
+ifneq ($(STATIC_VERSION),true)
+	ifneq ($(origin prerelease), command line)
 		prerelease := dev
 	endif
 endif
 
-# Specify the release type manully, <major|minor|patch>, default release as last tag
-# increase patch version when prerelease mode
-release_as ?= $(LAST_TAG)
-ifneq ($(prerelease),)
-	release_as := patch
-endif
-
 get_version = \
 	set -eu; \
-	ver=$(LAST_TAG); \
+	ver=$(LATEST_TAG); \
 	[ -n "$$ver" ] || exit 1; \
-	release_as=$$(echo $(release_as) | sed "s/major/M/;s/minor/m/;s/patch/p/"); \
-	ver=$$(echo "$$ver" | awk -v release_as=$$release_as 'BEGIN{FS=OFS="."} release_as~"^v?[0-9]+(\\.[0-9]+)*$$"{print gensub("^v","","g",release_as);exit} $$0~"(\\.[0-9]+)+$$"{ i=index("Mmp", release_as); if (i!=0) { $$i++; while (i<3) {$$(++i)=0} } print }'); \
-	ver=$${ver:-$(LAST_TAG)}; \
+	if [ "$(IS_LATEST)" != "true" -a $(STATIC_VERSION) != "true" ]; then \
+		release_as=$$(echo $(release_as) | sed "s/major/M/;s/minor/m/;s/patch/p/"); \
+		ver=$$(echo "$$ver" | awk -v release_as=$$release_as 'BEGIN{FS=OFS="."} release_as~"^v?[0-9]+(\\.[0-9]+)*$$"{print gensub("^v","","g",release_as);exit} $$0~"(\\.[0-9]+)+$$"{ i=index("Mmp", release_as); if (i!=0) { $$i++; while (i<3) {$$(++i)=0} } print }'); \
+		ver=$${ver:-$(LATEST_TAG)}; \
+	fi; \
 	prerelease=$(prerelease); \
 	if [ -n "$$prerelease" ]; then \
 		ver="$${ver%%-$$prerelease}-$$prerelease"; \
@@ -61,13 +71,12 @@ help:
 release:
 	git release -t $(argument)
 
-## > version - Show versions info
+## > version [release_as=patch|minor|major|x.y.z] [prerelease=dev|rc|xxx] - Show versions info
 version:
-	@echo Current version: $(LAST_TAG)
-	@echo Current revision: $(GIT_COMMIT)
-	@echo IS_LATEST: $(IS_LATEST)
+	@printf "Current version: %s (commit: %s, is_latest: %s)\n" $(LATEST_TAG) $(GIT_COMMIT) $(IS_LATEST)
+	@printf "Version: %s\n" $(release_tag)
 
-## > build [release_as=patch|minor|major] [prerelease=dev|rc|xxx] - build project for all support OSes
+## > build [release_as=patch|minor|major|x.y.z] [prerelease=dev|rc|xxx] - build project for all support OSes
 build: clean
 	# $(GOX) -os "darwin linux windows" -arch="amd64 arm64" -output "out/fconv-{{.OS}}-{{.Arch}}" ./
 	@set -x;\
@@ -87,7 +96,7 @@ build: clean
 		done \
 	done
 
-## > publish [PREFIX=tdio] - publish docker image
+## > publish [PREFIX=tdio][release_as][prerelease] - publish docker image
 publish:
 	export BUILD_TAG=$(release_tag); \
 	docker buildx bake \
