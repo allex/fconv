@@ -109,3 +109,7 @@ If LibreOffice is not installed or fails to convert:
 ## Examples
 
 - [Use fconv as a external doc2docx service](./examples/fastgpt_custom_doc2docx.md)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

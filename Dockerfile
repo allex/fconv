@@ -45,10 +45,13 @@ RUN set -ex; \
 # -------- Runtime stage --------
 FROM debian:12-slim
 
+ARG GIT_COMMIT=
+
 ENV DEBIAN_FRONTEND=noninteractive \
 	GIN_MODE=release \
 	FCONV_PORT=8080 \
-	FCONV_ENABLE_SHA256=true
+	FCONV_ENABLE_SHA256=true \
+	GIT_COMMIT=${GIT_COMMIT}
 
 # Install packages from mounted .deb files
 RUN --mount=from=package-downloader,source=/tmp/build,target=/tmp/build \

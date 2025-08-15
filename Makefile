@@ -102,6 +102,16 @@ publish:
 	docker buildx bake \
 		--set "main.args.GIT_COMMIT=$(GIT_COMMIT)" \
 		--set "main.args.BUILD_TIME=$(BUILT)" \
+		--set "main.labels.org.opencontainers.image.title=fconv" \
+		--set "main.labels.org.opencontainers.image.description=File conversion service" \
+		--set "main.labels.org.opencontainers.image.version=v$(release_tag)" \
+		--set "main.labels.org.opencontainers.image.created=$(BUILT)" \
+		--set "main.labels.org.opencontainers.image.revision=$(GIT_COMMIT)" \
+		--set "main.labels.org.opencontainers.image.source=https://github.com/allex/fconv" \
+		--set "main.labels.org.opencontainers.image.documentation=https://github.com/allex/fconv/README.md" \
+		--set "main.labels.org.opencontainers.image.authors=allex_wang" \
+		--set "main.labels.org.opencontainers.image.vendor=tdio" \
+		--set "main.labels.org.opencontainers.image.licenses=MIT" \
 		--push
 
 clean:
